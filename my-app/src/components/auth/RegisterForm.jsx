@@ -37,32 +37,21 @@ export default function RegisterForm() {
         body: JSON.stringify({ name: name.trim(), email: normalizedEmail, password: pw })
       });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        // 409 = email in use (we’ll implement below)
-        const message = data?.error || (res.status === 409 ? "Email already in use" : "Registration failed");
-        throw new Error(message);
-      }
-
-      // auto login user using NextAuth credentials provider
-      const login = await signIn("credentials", {
-        email: normalizedEmail,
-        password: pw,
-        redirect: false
-      });
-
-      if (login?.error) {
-        // fallback: send to login page if auto-login fails
-        router.replace("/auth/login");
-        return;
-      }
-      router.replace("/onboarding");
-    } catch (e) {
-      setErr(e.message || "Registration failed");
-    } finally {
-      setLoading(false);
+       if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const message = data?.error || (res.status === 409 ? "Email already in use" : "Registration failed");
+      throw new Error(message);
     }
+
+    // new: go to verify page, not auto-login
+    router.replace(`/verify?email=${encodeURIComponent(normalizedEmail)}`);
+
+  } catch (e) {
+    setErr(e.message || "Registration failed");
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <form onSubmit={onSubmit} className="mx-auto w-full max-w-sm space-y-4" aria-busy={loading}>

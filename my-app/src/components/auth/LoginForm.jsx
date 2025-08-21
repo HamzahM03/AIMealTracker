@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -10,24 +10,54 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   async function onSubmit(e) {
     e.preventDefault();
     setErr("");
     setLoading(true);
-    const res = await signIn("credentials", {
-    email: email.trim().toLowerCase(),
-    password,
-    redirect: false,
-  });
 
-    setLoading(false);
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (res?.error) {
+    try {
+      const res = await signIn("credentials", {
+        email: normalizedEmail,
+        password,
+        redirect: false,
+      });
+
+      setLoading(false);
+
+      // Success → honor callbackUrl or go to /plan
+      if (res?.ok) {
+        const cb = searchParams.get("callbackUrl");
+        router.replace(cb || "/plan");
+        return;
+      }
+
+      // Failed sign-in. Check if it's the *correct password* but unverified.
+      if (res?.error === "CredentialsSignin") {
+        try {
+          const r = await fetch("/api/auth/lookup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: normalizedEmail, password }),
+          });
+          const data = await r.json().catch(() => ({}));
+          if (data?.unverified === true) {
+            router.replace(`/verify?email=${encodeURIComponent(normalizedEmail)}`);
+            return;
+          }
+        } catch {
+          // ignore; fall through to generic error
+        }
+      }
+
       setErr("Invalid email or password");
-      return;
+    } catch (e) {
+      setLoading(false);
+      setErr("Something went wrong. Please try again.");
     }
-    router.replace("/plan");
   }
 
   return (
@@ -72,7 +102,9 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={loading}
-        className={`w-full rounded-xl px-4 py-2 text-sm font-medium text-white ${loading ? "bg-black/70" : "bg-black hover:bg-black/90"}`}
+        className={`w-full rounded-xl px-4 py-2 text-sm font-medium text-white ${
+          loading ? "bg-black/70" : "bg-black hover:bg-black/90"
+        }`}
       >
         {loading ? "Logging in…" : "Login"}
       </button>

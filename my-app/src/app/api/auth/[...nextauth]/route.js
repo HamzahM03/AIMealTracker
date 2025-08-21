@@ -1,3 +1,4 @@
+// app/api/auth/[...nextauth]/route.js
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { dbConnect } from "@/lib/dbConnect";
@@ -12,25 +13,48 @@ export const authOptions = {
       name: "Credentials",
       credentials: { email: {}, password: {} },
       async authorize(creds) {
-        if (!creds?.email || !creds?.password) return null;
-        await dbConnect();
-        const email = creds.email.trim().toLowerCase();
-        const user = await User.findOne({ email }).select("+passwordHash");
-        if (!user) return null;
-        const ok = await bcrypt.compare(creds.password, user.passwordHash);
-        if (!ok) return null;
-        return { id: String(user._id), email: user.email, name: user.name || user.email };
+        try {
+          if (!creds?.email || !creds?.password) return null;
+
+          await dbConnect();
+          const email = creds.email.trim().toLowerCase();
+
+          const user = await User.findOne({ email }).select("+passwordHash emailVerified");
+          console.log("[LOGIN] user?", !!user, "hasHash?", !!user?.passwordHash, "verified?", !!user?.emailVerified);
+
+          if (!user?.passwordHash) return null;
+
+          const ok = await bcrypt.compare(String(creds.password), String(user.passwordHash));
+          if (!ok) return null;
+
+          if (!user.emailVerified) {
+            const err = new Error("EMAIL_NOT_VERIFIED");
+            err.name = "CredentialsSignin";
+            throw err;
+          }
+
+          return { id: String(user._id), email: user.email, name: user.name || user.email };
+        } catch (e) {
+          console.error("[LOGIN authorize] error:", e);
+          return null;
+        }
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.uid = user.id;
+      if (user) {
+        token.uid = user.id;
+        token.email = user.email;
+        token.name = user.name ?? user.email;
+      }
       return token;
     },
     async session({ session, token }) {
       if (!session.user) session.user = {};
-      if (token?.uid) session.user.id = token.uid;
+      if (token?.uid)   session.user.id = token.uid;
+      if (token?.email) session.user.email = token.email;
+      if (token?.name)  session.user.name = token.name;
       return session;
     },
   },

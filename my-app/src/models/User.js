@@ -53,7 +53,12 @@ const PlanSchema = new mongoose.Schema({
 const UserSchema = new mongoose.Schema({
   // auth
   email: { type: String, required: true, trim: true, lowercase: true, unique: true, match: /.+\@.+\..+/ },
-  passwordHash: { type: String, required: true },
+  passwordHash: { type: String, required: true, select: false },
+  emailVerified: { type: Date, default: null },
+  verifyCodeHash: { type: String, select: false },
+  verifyCodeExp: { type: Date },
+  verifyCodeSentAt: { type: Date }, 
+
 
   // profile
   name: { type: String, trim: true },
@@ -69,6 +74,7 @@ const UserSchema = new mongoose.Schema({
   preferences: PreferenceSchema,
   pantry: [PantryItemSchema],
   feedback: PlanFeedbackSchema,
+  
 
   // generated
   plans: [PlanSchema]
