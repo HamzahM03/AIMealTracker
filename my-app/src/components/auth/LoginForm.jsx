@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -7,27 +9,25 @@ export default function LoginForm() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const router = useRouter();
 
   async function onSubmit(e) {
     e.preventDefault();
     setErr("");
     setLoading(true);
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error || "Invalid login");
-      }
-      window.location.href = "/plan"; // go to main page after login
-    } catch (e) {
-      setErr(e.message || "Login failed");
-    } finally {
-      setLoading(false);
+    const res = await signIn("credentials", {
+    email: email.trim().toLowerCase(),
+    password,
+    redirect: false,
+  });
+
+    setLoading(false);
+
+    if (res?.error) {
+      setErr("Invalid email or password");
+      return;
     }
+    router.replace("/plan");
   }
 
   return (
@@ -78,7 +78,7 @@ export default function LoginForm() {
       </button>
 
       <p className="text-center text-sm text-gray-600">
-        Don’t have an account? <a className="underline" href="/register">Register</a>
+        Don’t have an account? <a className="underline" href="/auth/register">Register</a>
       </p>
     </form>
   );

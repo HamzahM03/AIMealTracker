@@ -12,7 +12,7 @@ const PreferenceSchema = new mongoose.Schema({
   exclusions: [{ type: String, trim: true }],   // avoid: ["peanuts","pork"]
   maxTimeM: { type: Number, min: 5, max: 240, default: 30 },
   mealsPerDay: { type: Number, enum: [2,3], default: 2 },
-  householdSize: { type: Number, min: 1, max: 8, default: 1 },
+  // householdSize: { type: Number, min: 1, max: 8, default: 1 },
   unitsPref: { type: String, enum: ["metric","imperial"], default: "metric" }
 }, { _id: false });
 
@@ -47,6 +47,8 @@ const PlanSchema = new mongoose.Schema({
   mealsPerDay: { type: Number, enum: [2,3], default: 2 }
 }, { _id: true });
 
+ 
+
 
 const UserSchema = new mongoose.Schema({
   // auth
@@ -57,6 +59,10 @@ const UserSchema = new mongoose.Schema({
   name: { type: String, trim: true },
   height: { value: Number, unit: { type: String, enum: ["cm","in"], default: "cm" } },
   weight: { value: Number, unit: { type: String, enum: ["kg","lb"], default: "kg" } },
+
+  // onboarding state  
+  profileCompleted: { type: Boolean, default: false },
+  onboardingStep: { type: String, enum: ["start","goal","body","prefs","done"], default: "start" },
 
   // nutrition inputs
   goal: GoalSchema,
