@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { dbConnect } from "@/lib/dbConnect";
 import User from "@/models/User";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+
 
 const SAMPLE_MEALS = [
   { name: "Chicken & Rice", macros:{kcal:520,protein:40,carb:60,fat:12}, ingredients:["chicken","rice","broccoli"] },
@@ -16,7 +18,7 @@ const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
 export async function POST(req) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { period = "day", mealsPerDay = 2 } = await req.json();

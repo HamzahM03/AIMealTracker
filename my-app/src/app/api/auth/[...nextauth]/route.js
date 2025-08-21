@@ -4,28 +4,21 @@ import { dbConnect } from "@/lib/dbConnect";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 
-const handler = NextAuth({
+export const authOptions = {
   session: { strategy: "jwt" },
-  pages: { signIn: "/auth/login" }, // make sure your login page matches this path
+  pages: { signIn: "/auth/login" },
   providers: [
     Credentials({
       name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
+      credentials: { email: {}, password: {} },
       async authorize(creds) {
         if (!creds?.email || !creds?.password) return null;
-
         await dbConnect();
         const email = creds.email.trim().toLowerCase();
-
         const user = await User.findOne({ email }).select("+passwordHash");
         if (!user) return null;
-
         const ok = await bcrypt.compare(creds.password, user.passwordHash);
         if (!ok) return null;
-
         return { id: String(user._id), email: user.email, name: user.name || user.email };
       },
     }),
@@ -36,11 +29,13 @@ const handler = NextAuth({
       return token;
     },
     async session({ session, token }) {
+      if (!session.user) session.user = {};
       if (token?.uid) session.user.id = token.uid;
       return session;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
 
+const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
